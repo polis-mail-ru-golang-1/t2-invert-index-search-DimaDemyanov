@@ -6,7 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"https://github.com/DimaDemyanov/t2-invert-index-search-DimaDemyanov/index"
+	"https://github.com/polis-mail-ru-golang-1/t2-invert-index-search-DimaDemyanov/index"
 )
 
 type resStruct struct {
