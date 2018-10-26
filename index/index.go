@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"sort"
 	"strings"
+	"sync"
 )
 
 //Index хранит слово и файлы с весами,содержащие это слово
@@ -21,7 +22,8 @@ type ExtFiles struct {
 }
 
 //FileIndexing обновляет стркутуру обратного индекса в файле filename
-func FileIndexing(arrayIndexes map[string]Index, filename string) error {
+func FileIndexing(arrayIndexes map[string]Index,
+	filename string, wg *sync.WaitGroup, sem *chan int) error {
 	myBytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		fmt.Println("Error occured while reading file:")
@@ -31,6 +33,7 @@ func FileIndexing(arrayIndexes map[string]Index, filename string) error {
 		str := string(myBytes)
 		words := strings.Split(str, " ")
 		for i := 0; i < len(words); i++ {
+			*sem <- 1
 			word := words[i]
 			_, ok := arrayIndexes[word]
 			if !ok {
@@ -39,24 +42,18 @@ func FileIndexing(arrayIndexes map[string]Index, filename string) error {
 				newWordIdx.Files = append(newWordIdx.Files, newFile)
 				arrayIndexes[word] = newWordIdx
 			} else {
-				var isExist bool = false
 				for j := 0; j < len(arrayIndexes[word].Files); j++ {
 					if arrayIndexes[word].Files[j].Filename == filename {
 						arrayIndexes[word].Files[j].Count++
-						isExist = true
 						sort.SliceStable(arrayIndexes[word].Files, func(i, j int) bool { return arrayIndexes[word].Files[i].Count > arrayIndexes[word].Files[j].Count })
 					}
 				}
-				if !isExist {
-					newFile := ExtFiles{filename, 1}
-					tmp := arrayIndexes[word]
-					tmp.Files = append(tmp.Files, newFile)
-					arrayIndexes[word] = tmp
-				}
 
 			}
+			<-*sem
 
 		}
 	}
+	wg.Done()
 	return nil
 }

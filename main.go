@@ -1,12 +1,13 @@
 package main
 
 import (
+	"./index"
 	"bufio"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
-	"https://github.com/polis-mail-ru-golang-1/t2-invert-index-search-DimaDemyanov/index"
+	"sync"
 )
 
 type resStruct struct {
@@ -22,15 +23,15 @@ func main() {
 		os.Exit(0)
 	}
 
-	var fileIndex map[string]Index
-	fileIndex = make(map[string]Index, 10)
+	var fileIndex map[string]index.Index
+	fileIndex = make(map[string]index.Index, 10)
+	var sem = make(chan int, 7)
+	var wg sync.WaitGroup
+	wg.Add(len(os.Args) - 1)
 	for i := 1; i < len(os.Args); i++ {
-		err := FileIndexing(fileIndex, os.Args[i])
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(0)
-		}
+		go index.FileIndexing(fileIndex, os.Args[i], &wg, &sem)
 	}
+	wg.Wait()
 	var userStr string
 	fmt.Print("Enter your phrase: ")
 	scanner := bufio.NewScanner(os.Stdin)
