@@ -7,11 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
-<<<<<<< HEAD
 	"sync"
-=======
-	"https://github.com/polis-mail-ru-golang-1/t2-invert-index-search-DimaDemyanov/index"
->>>>>>> 6b76b5d227c23586d275bb6578435d797e018d93
 )
 
 type resStruct struct {
