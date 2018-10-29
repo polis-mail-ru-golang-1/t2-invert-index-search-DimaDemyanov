@@ -1,9 +1,10 @@
 package main
 
 import (
-	"./index"
 	"bufio"
 	"fmt"
+	"github.com/polis-mail-ru-golang-1/t2-invert-index-search-DimaDemyanov/filesIn"
+	"github.com/polis-mail-ru-golang-1/t2-invert-index-search-DimaDemyanov/index"
 	"os"
 	"sort"
 	"strings"
@@ -22,14 +23,14 @@ func main() {
 		fmt.Println(os.Args[0] + " [file1 file2 ...]")
 		os.Exit(0)
 	}
-
 	var fileIndex map[string]index.Index
 	fileIndex = make(map[string]index.Index, 10)
-	var sem = make(chan int, 7)
+	var sem = make(chan int, 1)
 	var wg sync.WaitGroup
 	wg.Add(len(os.Args) - 1)
 	for i := 1; i < len(os.Args); i++ {
-		go index.FileIndexing(fileIndex, os.Args[i], &wg, &sem)
+		str, _ := filesIn.ReadData(os.Args[i])
+		go index.FileIndexing(fileIndex, str, os.Args[i], &wg, &sem)
 	}
 	wg.Wait()
 	var userStr string
@@ -38,7 +39,7 @@ func main() {
 	scanner.Scan()
 	userStr = scanner.Text()
 	var resultIdx []resStruct
-	words := strings.Split(userStr, " ")
+	words := strings.Fields(userStr)
 	for i := 0; i < len(words); i++ {
 		val, ok := fileIndex[words[i]]
 		if ok {
