@@ -1,0 +1,9 @@
+{
+  "configurations": [
+    {
+      "name": "main",
+      "mode": "debug",
+      "args": ["in.txt", "in1.txt"]
+    }
+  ]
+}
