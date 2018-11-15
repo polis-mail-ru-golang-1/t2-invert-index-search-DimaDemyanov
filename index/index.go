@@ -1,10 +1,16 @@
 package index
 
 import (
+	"github.com/polis-mail-ru-golang-1/t2-invert-index-search-DimaDemyanov/filesIn"
 	"sort"
 	"strings"
 	"sync"
 )
+
+type ResStruct struct {
+	Filename string
+	Count    int
+}
 
 //Index хранит слово и файлы с весами,содержащие это слово
 type Index struct {
@@ -21,8 +27,10 @@ type ExtFiles struct {
 
 //FileIndexing обновляет стркутуру обратного индекса в файле filename
 func FileIndexing(arrayIndexes map[string]Index,
-	inData string, filename string, wg *sync.WaitGroup, sem *chan int) error {
+	filePath string, filename string,
+	wg *sync.WaitGroup, sem *chan int) error {
 	//words := strings.Split(str, " ")
+	inData, _ := filesIn.ReadData(filePath)
 	str := inData
 	words := strings.Fields(str)
 	for i := 0; i < len(words); i++ {
@@ -55,4 +63,31 @@ func FileIndexing(arrayIndexes map[string]Index,
 	}
 	wg.Done()
 	return nil
+}
+
+func PhraseIndexing(userStr string, fileIndex map[string]Index) []ResStruct {
+	var resultIdx []ResStruct
+	words := strings.Fields(userStr)
+	for i := 0; i < len(words); i++ {
+		val, ok := fileIndex[words[i]]
+		if ok {
+			for j := 0; j < len(val.Files); j++ {
+				var isInMap bool = false
+				for k := 0; k < len(resultIdx); k++ {
+					if resultIdx[k].Filename == val.Files[j].Filename {
+						resultIdx[k].Count += val.Files[j].Count
+						isInMap = true
+					}
+				}
+				if !isInMap {
+					tmp := ResStruct{val.Files[j].Filename, val.Files[j].Count}
+					resultIdx = append(resultIdx, tmp)
+
+				}
+			}
+		}
+	}
+
+	sort.SliceStable(resultIdx, func(i, j int) bool { return resultIdx[i].Count > resultIdx[j].Count })
+	return resultIdx
 }
