@@ -32,7 +32,6 @@ func main() {
 		os.Exit(2)
 	}
 	sliceOfNames = getFilesInDir(arg[0])
-	fmt.Println(sliceOfNames)
 	var sem = make(chan int, 1)
 	var wg sync.WaitGroup
 	wg.Add(len(sliceOfNames) - 1)
