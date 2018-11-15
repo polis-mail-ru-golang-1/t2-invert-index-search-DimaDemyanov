@@ -1,66 +1,76 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"github.com/polis-mail-ru-golang-1/t2-invert-index-search-DimaDemyanov/filesIn"
 	"github.com/polis-mail-ru-golang-1/t2-invert-index-search-DimaDemyanov/index"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
-	"sort"
+	"strconv"
 	"strings"
 	"sync"
 )
 
-type resStruct struct {
-	filename string
-	Count    int
-}
+var (
+	fileIndex    = make(map[string]index.Index, 10)
+	sliceOfNames []string
+	portNumber   int
+)
 
 func main() {
-	if len(os.Args) == 1 {
-		fmt.Println("No files found")
-		fmt.Println("Use:")
-		fmt.Println(os.Args[0] + " [file1 file2 ...]")
-		os.Exit(0)
+	arg := os.Args[1:]
+
+	if len(arg) != 2 {
+		fmt.Println("Wrong number of arguments.")
+		os.Exit(1)
 	}
-	var fileIndex map[string]index.Index
-	fileIndex = make(map[string]index.Index, 10)
+	argPort := strings.TrimLeft(arg[1], ":")
+	portNumber, err := strconv.Atoi(argPort)
+	if err != nil {
+		fmt.Println("Wrong port nubmer: " + "\"" + argPort + "\"")
+		os.Exit(2)
+	}
+	sliceOfNames = getFilesInDir(arg[0])
+	fmt.Println(sliceOfNames)
 	var sem = make(chan int, 1)
 	var wg sync.WaitGroup
-	wg.Add(len(os.Args) - 1)
-	for i := 1; i < len(os.Args); i++ {
-		str, _ := filesIn.ReadData(os.Args[i])
-		go index.FileIndexing(fileIndex, str, os.Args[i], &wg, &sem)
+	wg.Add(len(sliceOfNames) - 1)
+	for i := 1; i < len(sliceOfNames); i++ {
+		go index.FileIndexing(fileIndex, arg[0]+"/"+sliceOfNames[i], sliceOfNames[i], &wg, &sem)
 	}
 	wg.Wait()
-	var userStr string
-	fmt.Print("Enter your phrase: ")
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Scan()
-	userStr = scanner.Text()
-	var resultIdx []resStruct
-	words := strings.Fields(userStr)
-	for i := 0; i < len(words); i++ {
-		val, ok := fileIndex[words[i]]
-		if ok {
-			for j := 0; j < len(val.Files); j++ {
-				var isInMap bool = false
-				for k := 0; k < len(resultIdx); k++ {
-					if resultIdx[k].filename == val.Files[j].Filename {
-						resultIdx[k].Count += val.Files[j].Count
-						isInMap = true
-					}
-				}
-				if !isInMap {
-					tmp := resStruct{val.Files[j].Filename, val.Files[j].Count}
-					resultIdx = append(resultIdx, tmp)
+	http.HandleFunc("/", inputForm)
+	http.ListenAndServe(":"+strconv.Itoa(portNumber), nil)
+}
 
-				}
-			}
+func inputForm(w http.ResponseWriter, r *http.Request) {
+	phrase := r.URL.Query().Get("phrase")
+
+	if phrase != "" {
+		fmt.Println(fileIndex)
+		resultIdx := index.PhraseIndexing(phrase, fileIndex)
+		//fmt.Println(resultIdx)
+		for i := 0; i < len(resultIdx); i++ {
+			fmt.Fprintln(w, resultIdx[i].Filename, "; совпадений -", resultIdx[i].Count)
 		}
 	}
-	sort.SliceStable(resultIdx, func(i, j int) bool { return resultIdx[i].Count > resultIdx[j].Count })
-	for i := 0; i < len(resultIdx); i++ {
-		fmt.Println(resultIdx[i].filename, "; совпадений -", resultIdx[i].Count)
+}
+
+// выделение имён файлов в заданной директории в слайс
+func getFilesInDir(dir string) []string {
+
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	sliceOfNames := make([]string, 0)
+	for _, file := range files {
+		if !file.IsDir() {
+			sliceOfNames = append(sliceOfNames, file.Name())
+		}
+	}
+
+	return sliceOfNames
 }
